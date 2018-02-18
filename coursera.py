@@ -3,6 +3,20 @@ from openpyxl import Workbook
 from lxml import etree
 from bs4 import BeautifulSoup
 import re
+import argparse
+
+
+def get_argv():
+    parser = argparse.ArgumentParser(
+        description='infirmation about courses'
+    )
+    parser.add_argument(
+        '--name',
+        '-n',
+        default='coursera.xlsx',
+        help='name exel file'
+    )
+    return parser.parse_args()
 
 
 def get_courses_list(
@@ -21,64 +35,93 @@ def get_courses_list(
         return url_courses_list
 
 
-def get_course_info(course_slug):
-    response = requests.get(course_slug)
+def get_html(url):
+    response = requests.get(url)
     if response.ok:
-        parse = BeautifulSoup(response.content, 'html.parser')
-        name_course = parse.find("h1").text
-        language_course = parse.find('div', {'class': 'rc-Language'})
-        if language_course:
-            language_course = language_course.text
-        else:
-            language_course = "no data"
-        begin_date_course = parse.find('div', {'class': 'startdate rc-StartDateString caption-text'}).text
-        if begin_date_course == 'No Upcoming Session Available':
-            begin_date_course = 'No Session'
-        else:
-            begin_date_course = " ".join(begin_date_course.split()[1:])
-        avarage_rating = parse.find(
-            'div',
-            {'class': 'ratings-text bt3-hidden-xs'}
-        )
-        if avarage_rating:
-            avarage_rating = re.findall(r'\d\.\d', avarage_rating.text)[0]
-        else:
-            avarage_rating = "no data"
-        course_inf = {
-            'name': name_course,
-            'language': language_course,
-            'begin date': begin_date_course,
-            'rating': avarage_rating
-        }
-        return course_inf
+        return response.content
 
 
-def output_courses_info_to_xlsx(file_name, top_size):
-    url_courses_list = get_courses_list(top_size)
-    if url_courses_list:
-        work_book = Workbook()
-        work_sheet = work_book.active
-        for url_courses in url_courses_list:
-            course_info = get_course_info(url_courses)
-            if course_info:
-                work_sheet.append(list(course_info.values()))
-                print("{url}:".format(url=url_courses))
-                for key, value in course_info.items():
-                    print('\t\t\t\t\t{key}: {value}'.format(
-                        key=key,
-                        value=value
-                    ))
-            else:
-                print ('{} - can not connect.'.format(url_courses))
-                continue
-        work_book.save(filename=file_name)
-        print ('Information is written to a file {}'.format(file_name))
+def get_course_info(page_course_html, url_course):
+    parse = BeautifulSoup(page_course_html, 'html.parser')
+    name_course = parse.find("h1").text
+    language_course = parse.find('div', {'class': 'rc-Language'})
+    if language_course:
+        language_course = language_course.text
+    else:
+        language_course = "no data"
+    begin_date_course = parse.find('div', {'class': 'startdate rc-StartDateString caption-text'}).text
+    if begin_date_course == 'No Upcoming Session Available':
+        begin_date_course = 'No Session'
+    else:
+        begin_date_course = " ".join(begin_date_course.split()[1:])
+    avarage_rating = parse.find(
+        'div',
+        {'class': 'ratings-text bt3-hidden-xs'}
+    )
+    if avarage_rating:
+        avarage_rating = re.findall(r'\d\.\d', avarage_rating.text)[0]
+    else:
+        avarage_rating = "no data"
+    course_info = {
+        'name': name_course,
+        'language': language_course,
+        'begin date': begin_date_course,
+        'rating': avarage_rating,
+        'url': url_course
+    }
+    return course_info
+
+
+def create_xlsx_file():
+    work_book = Workbook()
+    work_sheet = work_book.active
+    title = [
+        'Name',
+        'Language',
+        'Begin date',
+        'Avarage_rating',
+        'url'
+    ]
+    work_sheet.append(title)
+    return work_book
+
+
+def add_courses_info_to_xlsx(work_book, course_info):
+    work_sheet = work_book.active
+    work_sheet.append([
+        course_info['name'],
+        course_info['language'],
+        course_info['begin date'],
+        course_info['rating'],
+        course_info['url']
+    ])
+    return work_book
+
+
+def save_xlsx_file(work_book, file_name):
+    work_book.save(filename=file_name)
+
+
+def print_course_info(course_info):
+    print("{url}:".format(url=course_info['url']))
+    for key, value in course_info.items():
+        print('\t\t\t\t\t{key}: {value}'.format(key=key, value=value))
 
 
 if __name__ == '__main__':
+    file_name = get_argv().name
+    top_size = 20
+    work_book = create_xlsx_file()
     try:
-        top_size = 20
-        file_name = "coursera.xlsx"
-        output_courses_info_to_xlsx(file_name, top_size)
+        courses_list = get_courses_list(top_size)
+        for url_course in courses_list:
+            page_course_html = get_html(url_course)
+            if page_course_html:
+                course_info = get_course_info(page_course_html, url_course)
+                add_courses_info_to_xlsx(work_book, course_info)
+                print_course_info(course_info)
+            else:
+                continue
+        save_xlsx_file(work_book, file_name)
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
         print("Can not connect!")
