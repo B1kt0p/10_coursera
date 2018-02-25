@@ -1,5 +1,5 @@
 # Coursera Dump
-The script collects information about the different courses on the Courser, leads it into a convenient view, and uploads it to a file in the Exel format.
+The script collects information about the various courses in Courser, and writes it to a file in the Exel format.
 # Get started:
 
 An example of running a script in Linux, Python 3.5:

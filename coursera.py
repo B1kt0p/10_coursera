@@ -33,9 +33,12 @@ def get_courses_url_list(
 
 
 def fetch_content(url):
-    response = requests.get(url)
-    if response.ok:
-        return response.content
+    try:
+        response = requests.get(url)
+        if response.ok:
+            return response.content
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        return None
 
 
 def get_course_info(page_course_html, url_course):
@@ -99,18 +102,17 @@ if __name__ == '__main__':
     top_size = 20
     url = 'https://www.coursera.org/sitemap~www~courses.xml'
     work_book = create_work_sheet()
-    try:
-        xml_data = fetch_content(url)
-        if xml_data:
-            courses_url_list = get_courses_url_list(top_size, xml_data)
-            for url_course in courses_url_list:
-                page_course_html = fetch_content(url_course)
-                if page_course_html:
-                    course_info = get_course_info(page_course_html, url_course)
-                    add_courses_info_to_work_sheet(work_book, course_info)
-            save_xlsx_file(work_book, file_name)
-            print('File {} saved.'.format(file_name))
-        else:
-            print('Can not connect!')
-    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+    xml_data = fetch_content(url)
+    if xml_data:
+        courses_url_list = get_courses_url_list(top_size, xml_data)
+        for url_course in courses_url_list:
+            page_course_html = fetch_content(url_course)
+            if page_course_html:
+                course_info = get_course_info(page_course_html, url_course)
+                add_courses_info_to_work_sheet(work_book, course_info)
+            else:
+                print('Can not open {}!'.format(url_course))
+        save_xlsx_file(work_book, file_name)
+        print('File {} saved.'.format(file_name))
+    else:
         print('Can not connect!')
