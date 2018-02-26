@@ -43,17 +43,20 @@ def fetch_content(url):
 
 def get_course_info(page_course_html, url_course):
     soup = BeautifulSoup(page_course_html, 'html.parser')
-    name_course = soup.find("h1").text
+    name_course = soup.find('h1').text
     language_course = soup.find('div', {'class': 'rc-Language'})
     if language_course:
         language_course = language_course.text
     else:
         language_course = None
-    begin_date_course = soup.find('div', {'class': 'startdate rc-StartDateString caption-text'}).text
-    if begin_date_course == 'No Upcoming Session Available':
+    begin_date_course = soup.find(
+        'div',
+        {'class': 'startdate rc-StartDateString caption-text'}
+    )
+    if begin_date_course.text == 'No Upcoming Session Available':
         begin_date_course = None
     else:
-        begin_date_course = " ".join(begin_date_course.split()[1:])
+        begin_date_course = ''.join(begin_date_course.text.split()[1:])
     avarage_rating = soup.find(
         'div',
         {'class': 'ratings-text bt3-hidden-xs'}
@@ -72,7 +75,7 @@ def get_course_info(page_course_html, url_course):
     return course_info
 
 
-def create_work_sheet():
+def create_work_book():
     work_book = Workbook()
     work_sheet = work_book.active
     title = [
@@ -88,7 +91,11 @@ def create_work_sheet():
 
 def add_courses_info_to_work_sheet(work_book, course_info):
     work_sheet = work_book.active
-    added_row = ['no data' if course_info[key] is None else course_info[key] for key in course_info]
+    added_row = ['no data'
+                 if course_info[key] is None
+                 else course_info[key]
+                 for key in course_info
+                 ]
     work_sheet.append(added_row)
     return work_book
 
@@ -101,7 +108,7 @@ if __name__ == '__main__':
     file_name = get_argv().name
     top_size = 20
     url = 'https://www.coursera.org/sitemap~www~courses.xml'
-    work_book = create_work_sheet()
+    work_book = create_work_book()
     xml_data = fetch_content(url)
     if xml_data:
         courses_url_list = get_courses_url_list(top_size, xml_data)
