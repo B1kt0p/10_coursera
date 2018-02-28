@@ -4,6 +4,7 @@ from lxml import etree
 from bs4 import BeautifulSoup
 import re
 import argparse
+from collections import OrderedDict
 
 
 def get_argv():
@@ -65,13 +66,13 @@ def get_course_info(page_course_html, url_course):
         avarage_rating = re.findall(r'\d\.\d', avarage_rating.text)[0]
     else:
         avarage_rating = None
-    course_info = {
-        'name': name_course,
-        'language': language_course,
-        'begin date': begin_date_course,
-        'rating': avarage_rating,
-        'url': url_course
-    }
+    course_info = OrderedDict([
+        ('name', name_course),
+        ('language', language_course),
+        ('begin date', begin_date_course),
+        ('rating', avarage_rating),
+        ('url', url_course)
+        ])
     return course_info
 
 
